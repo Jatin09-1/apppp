@@ -1,78 +1,61 @@
-# use fast api taking string as parameter from a get function and converting it to image and then to numpy array and then to a dataframe and then to a prediction and then to a json file and then to a string and then to a response
-from flask import Flask, json, request
-from tensorflow.keras.models import model_from_json
-from flask_cors import CORS, cross_origin
+import streamlit as st
 import numpy as np
-import pandas as pd
-import cv2
-import pickle
-import base64
-from io import BytesIO
+import os
+from keras.models import load_model
+from keras.preprocessing.image import img_to_array
 from PIL import Image
-from typing import List
-from pydantic import BaseModel
-import tensorflow as tf
+import gdown
 
-app = Flask(__name__)
-cors = CORS(app)
-app.config['CORS_HEADERS'] = 'Content-Type'
+# Step 1: Define model path and Google Drive file ID
+MODEL_PATH = "model.h5"
+FILE_ID = "YOUR_FILE_ID_HERE"  # Replace with your actual Google Drive file ID
 
-# model = pickle.load(open("brain_tumor_model.pkl", "rb"))
-json_file = open('model.json', 'r')
-loaded_model_json = json_file.read()
-json_file.close()
-loaded_model = model_from_json(loaded_model_json)
-# load weights into new model
-loaded_model.load_weights("model.h5")
+# Step 2: Download model from Google Drive if not already present
+if not os.path.exists(MODEL_PATH):
+    download_url = f"https://drive.google.com/uc?id={FILE_ID}"
+    st.info("Downloading model... Please wait.")
+    gdown.download(download_url, MODEL_PATH, quiet=False)
 
+# Step 3: Load the model
+@st.cache_resource
+def load_brain_model():
+    return load_model(MODEL_PATH)
 
-def get_cv2_image_from_base64_string(b64str):
-    encoded_data = b64str.split(',')[1]
-    nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    return img
+model = load_brain_model()
 
+# Class labels
+class_labels = ['pituitary', 'glioma', 'notumor', 'meningioma']
 
-def get_image_from_base64_string(b64str):
-    encoded_data = b64str.split(',')[1]
-    image_data = BytesIO(base64.b64decode(encoded_data))
-    img = Image.open(image_data)
-    return img
+# Step 4: Prediction function
+def predict_tumor(image, model, image_size=128):
+    image = image.resize((image_size, image_size))
+    img_array = img_to_array(image) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
+    
+    predictions = model.predict(img_array)
+    predicted_class_index = np.argmax(predictions, axis=1)[0]
+    confidence_score = np.max(predictions, axis=1)[0]
+    
+    if class_labels[predicted_class_index] == 'notumor':
+        result = "No Tumor"
+    else:
+        result = f"Tumor: {class_labels[predicted_class_index]}"
+    
+    return result, confidence_score
 
-@app.route('/home',methods=['GET'])
-def home():
-    return "Hello World"
+# Step 5: Streamlit UI
+st.set_page_config(page_title="Brain Tumor Detection", layout="centered")
+st.title("🧠 Brain Tumor Detection App")
+st.write("Upload a brain MRI image to detect tumor type (if any).")
 
-@app.route("/", methods=['POST'])
-def read_root():
-    data = json.loads(request.data)
-    predict_img = []
-    for item in data['image']:
-        #Decode the base64-encoded image
-        image = get_cv2_image_from_base64_string(item)
-        image = cv2.resize(image,(224,224))
-        predict_img.append(image)
-        # encoded_data = item.split(',')[1]
-        # image_data = BytesIO(base64.b64decode(encoded_data))
-        # pil_image = Image.open(image_data)
-        # # Resize the image to 224x224
-        # resized_image = pil_image.resize((224, 224))
-        # # Append the resized image to the list
-        # predict_img.append(resized_image)
+uploaded_file = st.file_uploader("Choose an MRI image...", type=["jpg", "png", "jpeg"])
 
-    # np_images = np.array([np.array(img) for img in predict_img])
-    # # Convert the NumPy array to a TensorFlow tensor
-    # tf_images = tf.convert_to_tensor(np_images, dtype=tf.float32)
-    # # # Convert the image to a numpy array
-    prediction = loaded_model.predict(np.array(predict_img))
-    result = np.argmax(prediction, axis=1)
-
-    # make the probablity frtom prediction
-    # print(prediction[:,1])
-    # print(result)
-
-    return {"result": prediction[:, 1].tolist()}
-
-
-if __name__ == '__main__':
-    app.run(port=5000)
+if uploaded_file is not None:
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_column_width=True)
+    
+    with st.spinner("Predicting..."):
+        result, confidence = predict_tumor(image, model)
+    
+    st.markdown(f"### 🔍 Result: {result}")
+    st.markdown(f"**Confidence:** {confidence * 100:.2f}%")
