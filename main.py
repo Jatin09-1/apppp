@@ -1,9 +1,8 @@
 import streamlit as st
 
-# 🚨 This must come FIRST — before any other st.* call
+# ✅ This MUST be the first Streamlit command
 st.set_page_config(page_title="Brain Tumor Detection", layout="centered")
 
-# Now you can import other libraries
 import numpy as np
 import os
 from keras.models import load_model
@@ -13,14 +12,13 @@ import gdown
 
 # Step 1: Define model path and correct Google Drive file ID
 MODEL_PATH = "model.h5"
-FILE_ID = "1Xv3Lc89oDKNetFoNS_-pq43w7Ic3uj_z"  # <-- FIXED ID
+FILE_ID = "1Xv3Lc89oDKNetFoNS_-pq43w7Ic3uj_z"  # <-- Correct ID
 
-# Step 2: Download model from Google Drive if not already present
+# Step 2: Download model if not already present
 if not os.path.exists(MODEL_PATH):
-    download_url = f"https://drive.google.com/uc?id={FILE_ID}"
-    st.info("Downloading model... Please wait.")
-    gdown.download(download_url, MODEL_PATH, quiet=False)
-
+    with st.spinner("Downloading model... Please wait."):
+        download_url = f"https://drive.google.com/uc?id={FILE_ID}"
+        gdown.download(download_url, MODEL_PATH, quiet=False)
 
 # Step 3: Load the model
 @st.cache_resource
@@ -50,7 +48,6 @@ def predict_tumor(image, model, image_size=128):
     return result, confidence_score
 
 # Step 5: Streamlit UI
-st.set_page_config(page_title="Brain Tumor Detection", layout="centered")
 st.title("🧠 Brain Tumor Detection App")
 st.write("Upload a brain MRI image to detect tumor type (if any).")
 
