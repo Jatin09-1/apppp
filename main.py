@@ -1,4 +1,9 @@
 import streamlit as st
+
+# 🚨 This must come FIRST — before any other st.* call
+st.set_page_config(page_title="Brain Tumor Detection", layout="centered")
+
+# Now you can import other libraries
 import numpy as np
 import os
 from keras.models import load_model
