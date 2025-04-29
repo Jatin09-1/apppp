@@ -6,15 +6,16 @@ from keras.preprocessing.image import img_to_array
 from PIL import Image
 import gdown
 
-# Step 1: Define model path and Google Drive file ID
+# Step 1: Define model path and correct Google Drive file ID
 MODEL_PATH = "model.h5"
-FILE_ID = "1Xv3Lc89oDKNetFoNS"  # Replace with your actual Google Drive file ID
+FILE_ID = "1Xv3Lc89oDKNetFoNS_-pq43w7Ic3uj_z"  # <-- FIXED ID
 
 # Step 2: Download model from Google Drive if not already present
 if not os.path.exists(MODEL_PATH):
     download_url = f"https://drive.google.com/uc?id={FILE_ID}"
     st.info("Downloading model... Please wait.")
     gdown.download(download_url, MODEL_PATH, quiet=False)
+
 
 # Step 3: Load the model
 @st.cache_resource
