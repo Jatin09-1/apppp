@@ -8,7 +8,7 @@ import gdown
 
 # Step 1: Define model path and Google Drive file ID
 MODEL_PATH = "model.h5"
-FILE_ID = "YOUR_FILE_ID_HERE"  # Replace with your actual Google Drive file ID
+FILE_ID = "1Xv3Lc89oDKNetFoNS"  # Replace with your actual Google Drive file ID
 
 # Step 2: Download model from Google Drive if not already present
 if not os.path.exists(MODEL_PATH):
